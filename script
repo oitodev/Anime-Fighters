@@ -1,0 +1,211 @@
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local TeleportService = game:GetService("TeleportService")
+
+getgenv().Enabled = false
+getgenv().UIClosed = false
+getgenv().Hidden = false
+
+local BadWareFolder = "BadWareDupe"
+if not isfolder(BadWareFolder) then
+    makefolder(BadWareFolder)
+end
+
+queue_on_teleport([[
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/sandwichk/RobloxScripts/main/Scripts/BadWare/Dupe/AFSim", true))()
+]])
+
+local kickEvents = {
+    {"Remote", "KickPlayer"},
+    {"Remote", "BanPlayer"},
+    {"Remote", "LogPlayer"},
+    {"Remote", "ReportAbuse"},
+}
+
+local function setupAntiBan()
+    for _, path in ipairs(kickEvents) do
+        local remote = ReplicatedStorage
+        for _, child in ipairs(path) do
+            remote = remote:FindFirstChild(child)
+            if not remote then break end
+        end
+        if remote then
+            local old
+            old = hookmetamethod(game, "__namecall", function(self, ...)
+                local method = getnamecallmethod()
+                if not checkcaller() and method == "FireServer" and self == remote then
+                    return
+                end
+                return old(self, ...)
+            end)
+        end
+    end
+end
+setupAntiBan()
+print("[BadWareDupe] AntiBan events hooked.")
+
+local AdminNames = {"AdminName1", "StaffName2", "ModName3"}
+Players.PlayerAdded:Connect(function(player)
+    for _, name in ipairs(AdminNames) do
+        if player.Name == name then
+            print("[BadWareDupe][AntiBan] Detected admin/staff in server: "..name)
+            getgenv().Enabled = false
+            TeleportService:Teleport(game.PlaceId)
+        end
+    end
+end)
+
+local UID = 14671621698
+local BadWare = game:GetObjects("rbxassetid://"..UID)[1]
+BadWare.Parent = game.CoreGui
+
+local Main = BadWare.Main
+local Status = Main.Status.Title
+local Buttons = Main.Buttons
+local Buttons2 = Main.Buttons2
+Status.Text = 'Status: <font color="#ff5252">Disabled</font>'
+
+local KeyToHide = getgenv().HideUI or Enum.KeyCode.P
+UserInputService.InputBegan:Connect(function(input, processed)
+    if input.KeyCode == KeyToHide and not processed then
+        getgenv().Hidden = not getgenv().Hidden
+        BadWare.Enabled = not getgenv().Hidden
+        if getgenv().Hidden then
+            print("")
+        end
+    end
+end)
+
+function getLowestPet(Size)
+    task.wait(math.random(1,3))
+    local LevelCap = Size or math.huge
+    local PetData = require(ReplicatedStorage.ModuleScripts.LocalDairebStore).GetStoreProxy("GameData"):GetData("Pets")
+    for _, Data in pairs(PetData) do
+        if not Data.Locked and Data.Level < LevelCap then
+            return Data.UID
+        end
+    end
+end
+
+Players.LocalPlayer.Idled:Connect(function()
+    if not getgenv().Enabled then return end
+    VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    task.wait(math.random(1,5))
+    VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end)
+
+local Debounce = false
+function Hide(Var)
+    if not Debounce then
+        Debounce = true
+        Buttons2.Visible = Var
+        Buttons.Visible = Var
+        Main.Title.Visible = Var
+        Main.Status.Visible = Var
+        Main.Interact.Visible = not Var
+        Main.OpenIcon.Visible = not Var
+        local size = Var and UDim2.new(0, 375, 0, 175) or UDim2.new(0, 50, 0, 50)
+        TweenService:Create(Main, TweenInfo.new(0.2), {Size = size}):Play()
+        task.wait(0.2)
+        getgenv().UIClosed = not getgenv().UIClosed
+    end
+    Debounce = false
+end
+
+local GUI = Main
+local dragging = false
+local dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    GUI.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+GUI.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = GUI.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+GUI.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+local function ChangeColor(Path, Color, OldColor)
+    TweenService:Create(Path, TweenInfo.new(0.2), {BackgroundColor3 = Color}):Play()
+    task.wait(0.2)
+    TweenService:Create(Path, TweenInfo.new(0.2), {BackgroundColor3 = OldColor}):Play()
+end
+
+local VaultInsert = {}
+local PetInVault = nil
+
+Buttons.Start.Interact.MouseButton1Click:Connect(function()
+    if getgenv().Enabled then 
+        Status.Text = 'Status: <font color="#ffc249">Already Enabled</font>'
+        task.wait(2)
+        Status.Text = 'Status: <font color="#85b651">Enabled</font>'
+        return 
+    end
+    getgenv().Enabled = true
+    ChangeColor(Buttons.Start, Color3.fromRGB(175,175,175), Color3.fromRGB(100,100,100))
+    PetInVault = getLowestPet()
+    ReplicatedStorage.Remote.PetVault:FireServer(PetInVault, true, string.rep("9", 4200000))
+    Status.Text = 'Status: <font color="#85b651">Enabled</font>'
+end)
+
+Buttons.Rejoin.Interact.MouseButton1Click:Connect(function()
+    ChangeColor(Buttons.Rejoin, Color3.fromRGB(175,175,175), Color3.fromRGB(100,100,100))
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Players.LocalPlayer)
+    Status.Text = 'Status: <font color="#ffc249">Rejoining</font>'
+end)
+
+Buttons2.Close.Interact.MouseButton1Click:Connect(function()
+    if getgenv().UIClosed then return end
+    ChangeColor(Buttons2.Close, Color3.fromRGB(255, 150, 150), Color3.fromRGB(255, 75, 75))
+    Hide(false)
+end)
+
+Main.Interact.MouseButton1Click:Connect(function()
+    if not getgenv().UIClosed then return end
+    Hide(true)
+end)
+
+Buttons2.Dungeon.Interact.MouseButton1Click:Connect(function()
+    if getgenv().Enabled then
+        local A = Status.Text
+        Status.Text = 'Status: <font color="#ffc249">Already Enabled</font>'
+        task.wait(2)
+        Status.Text = A
+        return 
+    end
+    ReplicatedStorage.Remote.PetVault:FireServer(getLowestPet(), true, string.rep("9", 4200000))
+    ChangeColor(Buttons2.Dungeon, Color3.fromRGB(116,209,255), Color3.fromRGB(41, 134, 255))
+    Status.Text = 'Status: <font color="#85b651">Infinite Dungeon - Enabled</font>'
+end)
+
+Buttons2.DupeUI.Interact.MouseButton1Click:Connect(function()
+    local dupeMachine = Players.LocalPlayer.PlayerGui.MainGui:FindFirstChild("DupeMachine")
+    if dupeMachine then
+        dupeMachine.Visible = not dupeMachine.Visible
+        Buttons2.DupeUI.Interact.Text = dupeMachine.Visible and "Dupe Machine Close" or "Dupe Machine Open"
+    end
+    ChangeColor(Buttons2.DupeUI, Color3.fromRGB(255, 96, 234), Color3.fromRGB(255, 33, 244))
+end)
+
+print("[OitoDev - Dupe] Script loaded with AntiBan enhancements!")
