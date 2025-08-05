@@ -10,9 +10,9 @@ getgenv().Enabled = false
 getgenv().UIClosed = false
 getgenv().Hidden = false
 
-local BadWareFolder = "BadWareDupe"
-if not isfolder(BadWareFolder) then
-    makefolder(BadWareFolder)
+local OitoDevFolder = "OitoDevFolder"
+if not isfolder(OitoDevFolder) then
+    makefolder(OitoDevFolder)
 end
 
 queue_on_teleport([[
@@ -46,18 +46,7 @@ local function setupAntiBan()
     end
 end
 setupAntiBan()
-print("[BadWareDupe] AntiBan events hooked.")
-
-local AdminNames = {"AdminName1", "StaffName2", "ModName3"}
-Players.PlayerAdded:Connect(function(player)
-    for _, name in ipairs(AdminNames) do
-        if player.Name == name then
-            print("[BadWareDupe][AntiBan] Detected admin/staff in server: "..name)
-            getgenv().Enabled = false
-            TeleportService:Teleport(game.PlaceId)
-        end
-    end
-end)
+print("[OitoDevDupe] AntiBan events hooked.")
 
 local UID = 14671621698
 local BadWare = game:GetObjects("rbxassetid://"..UID)[1]
@@ -208,4 +197,4 @@ Buttons2.DupeUI.Interact.MouseButton1Click:Connect(function()
     ChangeColor(Buttons2.DupeUI, Color3.fromRGB(255, 96, 234), Color3.fromRGB(255, 33, 244))
 end)
 
-print("[OitoDev - Dupe] Script loaded with AntiBan enhancements!")
+print("[OitoDevDupe] Script loaded with AntiBan enhancements!")
